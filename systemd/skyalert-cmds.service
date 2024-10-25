@@ -1,0 +1,12 @@
+[Unit]
+Description=SkyAlert Bot - Command Handler
+After=network.target
+
+# Change ExecStart to the correct path for your venv and script
+[Service]
+Type=simple
+ExecStart=/home/jaherron/code/python/.venv/bin/python /home/jaherron/code/python/skyalert/skyalert-cmds.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

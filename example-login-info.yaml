@@ -1,0 +1,4 @@
+username: "someone.bsky.social" # Name of Bluesky account the bot will use
+password: "XXXX-XXXX-XXXX-XXXX" # Password for Bluesky account, this should be an App Password with DM permissions
+
+# The script will add another key to this file labelled "session-key", which prevents the bot from running into login limits

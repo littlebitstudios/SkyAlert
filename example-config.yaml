@@ -1,0 +1,14 @@
+# DIDs and handles are not secrets so they can be in this example file
+
+follow_watches: # Unfollow notifications
+- did: did:plc:big6e357j2bbrlkyms5vjkgf
+  handle: littlebitstudios.com
+repost_defaults: # Default repost settings for users
+- did: did:plc:big6e357j2bbrlkyms5vjkgf
+  reposts-allowed: true
+user_watches: # Post notifications, optional repost notifications
+- receiver-did: did:plc:big6e357j2bbrlkyms5vjkgf
+  receiver-handle: littlebitstudios.com
+  reposts-allowed: true
+  subject-did: did:plc:slyslkoqbljlmz5jt5unojeb
+  subject-handle: littlebit672.bsky.social
