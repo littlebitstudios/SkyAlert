@@ -393,11 +393,17 @@ def main():
         if unfollowed_dids:
             message = "These users have unfollowed you:\n"
             profile_lines = []
+            profile_fail = False
             for did in unfollowed_dids:
-                profile = client.get_profile(did).model_dump()
-                profile_lines.append(f"- {profile['handle']}")
+                try:    
+                    profile = client.get_profile(did).model_dump()
+                    profile_lines.append(f"- {profile['handle']}")
+                except:
+                    profile_lines.append(f"- {did}")
+                    profile_fail = True
             
             message += "\n".join(profile_lines)
+            if profile_fail: message += "\n\nSome profiles could not be loaded, so their handles are replaced by a DID. Someone deleted their account, or something else went wrong."
             send_dm(user_did, message)
         
         if VERBOSE_PRINTING: print("Saving follower cache...")
