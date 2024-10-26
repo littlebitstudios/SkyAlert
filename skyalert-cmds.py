@@ -17,6 +17,15 @@ VERBOSE_PRINTING = False
 
 client=Client()
 
+@client.on_session_change
+def on_session_change(event: atproto_client.SessionEvent,session: atproto_client.Session):
+    if event==SessionEvent.CREATE or event==SessionEvent.REFRESH:
+        with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
+            login_info = yaml.safe_load(f1)
+            with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
+                new_login_info = {'username': login_info['username'], 'password': login_info['password'], 'session-key': session.export()}
+                yaml.dump(new_login_info, f2)
+
 with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
     login_info = yaml.safe_load(f)
     
@@ -409,15 +418,6 @@ def bot_commands_handler_with_retry():
 )
 def main_with_retry():
     main()
-    
-@client.on_session_change
-def on_session_change(event: atproto_client.SessionEvent,session: atproto_client.Session):
-    if event==SessionEvent.CREATE or event==SessionEvent.REFRESH:
-        with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
-            login_info = yaml.safe_load(f1)
-            with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
-                new_login_info = {'username': login_info['username'], 'password': login_info['password'], 'session-key': session.export()}
-                yaml.dump(new_login_info, f2)
     
 time_waited = 0
 cmd_check_interval = 60
