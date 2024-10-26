@@ -48,7 +48,7 @@ with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
     if 'session-key-firehose' in login_info and login_info['session-key-firehose']:
         client.login(session_string=login_info['session-key-firehose'])
     else:
-        client.login(username=login_info['username'], password=login_info['password'])
+        client.login(login=login_info['username'], password=login_info['password'])
 
 VERBOSE_PRINTING = False
 
