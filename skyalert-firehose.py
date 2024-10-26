@@ -28,11 +28,25 @@ PASSWORD = ""
 global client
 client = Client()
 
+@client.on_session_change
+def on_session_change(event: atproto_client.SessionEvent,session: atproto_client.Session):
+    if event==SessionEvent.CREATE or event==SessionEvent.REFRESH:
+        with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
+            login_info = yaml.safe_load(f1)
+            with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
+                new_login_info = {
+                    'username': login_info['username'],
+                    'password': login_info['password'],
+                    'session-key-firehose': session.export(),
+                    'session-key-cmds': login_info['session-key-cmds'] if 'session-key-cmds' in login_info else ""
+                }
+                yaml.dump(new_login_info, f2)
+
 with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
     login_info = yaml.safe_load(f)
 
-    if 'session-key' in login_info and login_info['session-key']:
-        client.login(session_string=login_info['session-key'])
+    if 'session-key-firehose' in login_info and login_info['session-key-firehose']:
+        client.login(session_string=login_info['session-key-firehose'])
     else:
         client.login(username=login_info['username'], password=login_info['password'])
 
@@ -270,15 +284,6 @@ def signal_handler(_: int, __: FrameType) -> None:
     pool.join()
 
     exit(0)
-
-@client.on_session_change
-def on_session_change(event: atproto_client.SessionEvent,session: atproto_client.Session):
-    if event==SessionEvent.CREATE or event==SessionEvent.REFRESH:
-        with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
-            login_info = yaml.safe_load(f1)
-            with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
-                new_login_info = {'username': login_info['username'], 'password': login_info['password'], 'session-key': session.export()}
-                yaml.dump(new_login_info, f2)
 
 if __name__ == '__main__':
     global firehose

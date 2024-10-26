@@ -23,14 +23,14 @@ def on_session_change(event: atproto_client.SessionEvent,session: atproto_client
         with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
             login_info = yaml.safe_load(f1)
             with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
-                new_login_info = {'username': login_info['username'], 'password': login_info['password'], 'session-key': session.export()}
+                new_login_info = {'username': login_info['username'], 'password': login_info['password'], 'session-key-cmds': session.export(), 'session-key-firehose': login_info['session-key-firehose'] if 'session-key-firehose' in login_info else None}
                 yaml.dump(new_login_info, f2)
 
 with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
     login_info = yaml.safe_load(f)
     
-    if 'session-key' in login_info and login_info['session-key']:
-        client.login(session_string=login_info['session-key'])
+    if 'session-key-cmds' in login_info and login_info['session-key-cmds']:
+        client.login(session_string=login_info['session-key-cmds'])
     else:
         client.login(login=login_info['username'], password=login_info['password'])
 
@@ -361,7 +361,7 @@ def main():
             with open(f"{CACHE_DIR}/followers-{user_did}.yaml", 'r') as f:
                 cached_followers = yaml.safe_load(f)
         
-        if VERBOSE_PRINTING:  print("Pulling current followers...")
+        if VERBOSE_PRINTING: print("Pulling current followers...")
         # Retrieve all current followers
         current_followers_objs = []
         current_followers_objs.append(client.get_followers(user_did).model_dump())
@@ -379,20 +379,20 @@ def main():
                 
         if VERBOSE_PRINTING: print("Checking for unfollows...")
         # Check for unfollowers
+        unfollowed_dids = []
         for cached_did in cached_followers:
-            unfollowed_dids = []
             if cached_did not in current_followers_dids:
                 unfollowed_dids.append(cached_did)
-            
+        
+        if unfollowed_dids:
             message = "These users have unfollowed you:\n"
             profile_lines = []
-            if len(unfollowed_dids) > 0:
-                for did in unfollowed_dids:
-                    profile = client.get_profile(did).model_dump()
-                    profile_lines.append(f"- {profile['handle']}")
+            for did in unfollowed_dids:
+                profile = client.get_profile(did).model_dump()
+                profile_lines.append(f"- {profile['handle']}")
             
-                message += "\n".join(profile_lines)
-                send_dm(user_did, message)
+            message += "\n".join(profile_lines)
+            send_dm(user_did, message)
         
         if VERBOSE_PRINTING: print("Saving follower cache...")
         # Update the cached followers list
