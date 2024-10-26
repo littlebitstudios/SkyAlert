@@ -15,7 +15,8 @@ CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
 VERBOSE_PRINTING = False
 
-client=Client()
+global client
+client = Client()
 
 @client.on_session_change
 def on_session_change(event: atproto_client.SessionEvent,session: atproto_client.Session):
@@ -23,22 +24,21 @@ def on_session_change(event: atproto_client.SessionEvent,session: atproto_client
         with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
             login_info = yaml.safe_load(f1)
             with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
-                new_login_info = {'username': login_info['username'], 'password': login_info['password'], 'session-key-cmds': session.export(), 'session-key-firehose': login_info['session-key-firehose'] if 'session-key-firehose' in login_info else None}
+                new_login_info = {
+                    'username': login_info['username'],
+                    'password': login_info['password'],
+                    'session-key-firehose': session.export(),
+                    'session-key-cmds': login_info['session-key-cmds'] if 'session-key-cmds' in login_info else ""
+                }
                 yaml.dump(new_login_info, f2)
 
 with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
     login_info = yaml.safe_load(f)
-    
-    if 'session-key-cmds' in login_info and login_info['session-key-cmds']:
-        client.login(session_string=login_info['session-key-cmds'])
+
+    if 'session-key-firehose' in login_info and login_info['session-key-firehose']:
+        client.login(session_string=login_info['session-key-firehose'])
     else:
         client.login(login=login_info['username'], password=login_info['password'])
-
-
-# create client proxied to Bluesky Chat service
-dm_client = client.with_bsky_chat_proxy()
-# create shortcut to convo methods
-dm = dm_client.chat.bsky.convo
 
 # Link detection by latchk3y on the Bluesky API Discord server
 def get_facets(text):
@@ -100,6 +100,9 @@ def post_url_from_at_uri(at_uri):
     return url
 
 def send_dm(to,message):
+    dm_client = client.with_bsky_chat_proxy()
+    dm = dm_client.chat.bsky.convo
+    
     # create resolver instance with in-memory cache
     id_resolver = IdResolver()
     # resolve DID
@@ -125,6 +128,9 @@ def send_dm(to,message):
 
 # logic for handling bot commands
 def bot_commands_handler():
+    dm_client = client.with_bsky_chat_proxy()
+    dm = dm_client.chat.bsky.convo
+    
     if VERBOSE_PRINTING: print("Checking for bot commands...")
     # check for commands sent to the bot
     dmconvos_objs = dm.list_convos().model_dump()

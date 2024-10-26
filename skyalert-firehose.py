@@ -21,9 +21,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.yaml')
 CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
-
-USERNAME = ""
-PASSWORD = ""
+VERBOSE_PRINTING = False
 
 global client
 client = Client()
@@ -31,6 +29,7 @@ client = Client()
 @client.on_session_change
 def on_session_change(event: atproto_client.SessionEvent,session: atproto_client.Session):
     if event==SessionEvent.CREATE or event==SessionEvent.REFRESH:
+        dm_client = client.with_bsky_chat_proxy()
         with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f1:
             login_info = yaml.safe_load(f1)
             with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'w') as f2:
@@ -47,15 +46,10 @@ with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
 
     if 'session-key-firehose' in login_info and login_info['session-key-firehose']:
         client.login(session_string=login_info['session-key-firehose'])
+        dm_client = client.with_bsky_chat_proxy()
     else:
         client.login(login=login_info['username'], password=login_info['password'])
-
-VERBOSE_PRINTING = False
-
-# create client proxied to Bluesky Chat service
-dm_client = client.with_bsky_chat_proxy()
-# create shortcut to convo methods
-dm = dm_client.chat.bsky.convo
+        dm_client = client.with_bsky_chat_proxy()
 
 # Link detection by latchk3y on the Bluesky API Discord server
 def get_facets(text):
@@ -129,6 +123,9 @@ def post_url_from_at_uri(at_uri):
     return url
 
 def send_dm(to,message):
+    dm_client = client.with_bsky_chat_proxy()
+    dm = dm_client.chat.bsky.convo
+    
     # create resolver instance with in-memory cache
     id_resolver = IdResolver()
     # resolve DID
