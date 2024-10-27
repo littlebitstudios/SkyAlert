@@ -192,53 +192,56 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
     signal.signal(signal.SIGINT, signal.SIG_IGN)  # we handle it in the main process
 
     while True:
-        message = pool_queue.get()
+        try:
+            message = pool_queue.get()
 
-        commit = parse_subscribe_repos_message(message)
-        if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
-            continue
+            commit = parse_subscribe_repos_message(message)
+            if not isinstance(commit, models.ComAtprotoSyncSubscribeRepos.Commit):
+                continue
 
-        if commit.seq % 20 == 0:
-            cursor_value.value = commit.seq
+            if commit.seq % 20 == 0:
+                cursor_value.value = commit.seq
 
-        if not commit.blocks:
-            continue
+            if not commit.blocks:
+                continue
 
-        ops = _get_ops_by_type(commit)
-        for created_post in ops[models.ids.AppBskyFeedPost]['created']:
-            for watch in get_config()['user_watches']:
-                if watch['subject-did'] == created_post['author']:
-                    post = created_post['record']
-                    profile = client.get_profile(created_post['author'])
-                    post_url = post_url_from_at_uri(created_post['uri'])
-                    message1 = f"{profile.handle} said: {post['text'].replace("\n", " ")}"
-                    message2 = f"Link to post: {post_url}"
-                    send_dm(watch['receiver-did'], message1)
-                    send_dm(watch['receiver-did'], message2)
+            ops = _get_ops_by_type(commit)
+            for created_post in ops[models.ids.AppBskyFeedPost]['created']:
+                for watch in get_config()['user_watches']:
+                    if watch['subject-did'] == created_post['author']:
+                        post = created_post['record']
+                        profile = client.get_profile(created_post['author'])
+                        post_url = post_url_from_at_uri(created_post['uri'])
+                        message1 = f"{profile.handle} said: {post['text'].replace("\n", " ")}"
+                        message2 = f"Link to post: {post_url}"
+                        send_dm(watch['receiver-did'], message1)
+                        send_dm(watch['receiver-did'], message2)
 
-        # # The followers cache is disabled; it was required only for follow watching.
-        # for created_follow in ops[models.ids.AppBskyGraphFollow]['created']:
-        #     author = created_follow['author']
-        #     record = created_follow['record']
-        #     uri = created_follow['uri']
+            # # The followers cache is disabled; it was required only for follow watching.
+            # for created_follow in ops[models.ids.AppBskyGraphFollow]['created']:
+            #     author = created_follow['author']
+            #     record = created_follow['record']
+            #     uri = created_follow['uri']
+                
+            #     for watch in get_config()['follow_watches']:
+            #         if watch['did'] == record['subject']:
+            #             followers_cache = get_followers_cache(record['subject'])
+            #             followers_cache.append(author)
+            #             save_followers_cache(record['subject'], followers_cache)
+                        
+            for created_repost in ops[models.ids.AppBskyFeedRepost]['created']:
+                for watch in get_config()['user_watches']:
+                    if watch['subject-did'] == created_repost['author'] and watch['reposts-allowed']:
+                        post = created_repost['record']
+                        reposter_handle = watch['subject-handle']
+                        reposted_profile = client.get_profile(post['subject'].uri.split('/')[2])
+                        post_url = post_url_from_at_uri(post['subject'].uri)
+                        message = f"{reposter_handle} reposted {reposted_profile.handle}\n{post_url}"
+                        send_dm(watch['receiver-did'], message)
             
-        #     for watch in get_config()['follow_watches']:
-        #         if watch['did'] == record['subject']:
-        #             followers_cache = get_followers_cache(record['subject'])
-        #             followers_cache.append(author)
-        #             save_followers_cache(record['subject'], followers_cache)
-                    
-        for created_repost in ops[models.ids.AppBskyFeedRepost]['created']:
-            for watch in get_config()['user_watches']:
-                if watch['subject-did'] == created_repost['author'] and watch['reposts-allowed']:
-                    post = created_repost['record']
-                    reposter_handle = watch['subject-handle']
-                    reposted_profile = client.get_profile(post['subject'].uri.split('/')[2])
-                    post_url = post_url_from_at_uri(post['subject'].uri)
-                    message = f"{reposter_handle} reposted {reposted_profile.handle}\n{post_url}"
-                    send_dm(watch['receiver-did'], message)
-        
-        # Deleted follow logic is not implemented yet; the unfollower can be found but not the person who was unfollowed
+            # Deleted follow logic is not implemented yet; the unfollower can be found but not the person who was unfollowed
+        except:
+            exception_handler()
                     
         
 def get_firehose_params(cursor_value: multiprocessing.Value) -> models.ComAtprotoSyncSubscribeRepos.Params:
@@ -280,6 +283,24 @@ def signal_handler(_: int, __: FrameType) -> None:
     pool.join()
 
     exit(0)
+    
+def exception_handler():
+    print('Exception thrown. The script will clean up and exit...')
+
+    # Stop receiving new messages
+    firehose.stop()
+
+    # Drain the messages queue
+    while not queue.empty():
+        #print('Waiting for the queue to empty...')
+        time.sleep(0.2)
+
+    #print('Queue is empty. Gracefully terminating processes...')
+
+    pool.terminate()
+    pool.join()
+
+    exit(1) # This will make systemd restart the service
 
 if __name__ == '__main__':
     global firehose
@@ -299,7 +320,10 @@ if __name__ == '__main__':
     workers_count = multiprocessing.cpu_count() * 2 - 1
     max_queue_size = 10000
 
+    global queue
     queue = multiprocessing.Queue(maxsize=max_queue_size)
+    
+    global pool
     pool = multiprocessing.Pool(workers_count, worker_main, (cursor, queue))
     
     @measure_events_per_second
