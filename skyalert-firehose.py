@@ -153,7 +153,6 @@ def send_dm(to,message):
 
 _INTERESTED_RECORDS = {
     models.ids.AppBskyFeedPost: models.AppBskyFeedPost,
-    # models.ids.AppBskyGraphFollow: models.AppBskyGraphFollow, # the bot doesn't need to see follows for the forseeable future
     models.ids.AppBskyFeedRepost: models.AppBskyFeedRepost
 }
 
