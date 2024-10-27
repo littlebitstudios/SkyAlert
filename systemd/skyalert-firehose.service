@@ -6,7 +6,8 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/home/jaherron/code/python/.venv/bin/python /home/jaherron/code/python/skyalert/skyalert-firehose.py
-Restart=on-failure
+Restart=always
+RuntimeMaxSec=3600
 
 [Install]
 WantedBy=multi-user.target
