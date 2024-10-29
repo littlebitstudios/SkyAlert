@@ -125,6 +125,28 @@ def post_url_from_at_uri(at_uri):
     url = f"https://bsky.app/profile/{did}/post/{random_string}"
     return url
 
+def bridgy_to_fed(handle:str):
+    if handle.endswith("ap.brid.gy"):
+        parts = handle.split('.')
+        if len(parts) >= 3:
+            username = parts[0]
+            domain = '.'.join(parts[1:-3])
+            return f"@{username}@{domain} (Bridgy)"
+        return handle
+    else:
+        return handle
+    
+def fed_to_bridgy(handle:str):
+    if "@" in handle:
+        parts = handle.split('@')
+        if len(parts) >= 3:
+            username = parts[1]
+            domain = '.'.join(parts[2:])
+            return f"{username}.{domain}.ap.brid.gy"
+        return handle
+    else:
+        return handle
+
 def send_dm(to,message):
     dm_client = client.with_bsky_chat_proxy()
     dm = dm_client.chat.bsky.convo
@@ -215,7 +237,7 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         post = created_post['record']
                         profile = client.get_profile(created_post['author'])
                         post_url = post_url_from_at_uri(created_post['uri'])
-                        message1 = f"{profile.handle} said: \"{post['text'].replace("\n", " ")}\""
+                        message1 = f"{bridgy_to_fed(profile.handle)} said: \"{post['text'].replace("\n", " ")}\""
                         
                         if post.reply is not None: message1 += f" [is a reply]"
                         
@@ -228,7 +250,6 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                                 if "tenor.com" in post.embed.external.uri: message1 += f" [has GIF]"
                                 else: message1 += f" [link preview]"
                             if post.embed.py_type == "app.bsky.embed.record": message1 += f" [quote repost]"
-                        
                         
                         message2 = f"Link to post: {post_url}"
                         send_dm(watch['receiver-did'], message1)
@@ -253,7 +274,7 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         reposter_handle = watch['subject-handle']
                         reposted_profile = client.get_profile(post['subject'].uri.split('/')[2])
                         post_url = post_url_from_at_uri(post['subject'].uri)
-                        message = f"{reposter_handle} reposted {reposted_profile.handle}\n{post_url}"
+                        message = f"{bridgy_to_fed(reposter_handle)} reposted {bridgy_to_fed(reposted_profile.handle)}\n{post_url}"
                         send_dm(watch['receiver-did'], message)
             
             # Deleted follow logic is not implemented yet; the unfollower can be found but not the person who was unfollowed

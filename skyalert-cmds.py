@@ -99,6 +99,30 @@ def post_url_from_at_uri(at_uri):
     url = f"https://bsky.app/profile/{did}/post/{random_string}"
     return url
 
+def bridgy_to_fed(handle:str):
+    if handle.endswith("ap.brid.gy"):
+        parts = handle.split('.')
+        if len(parts) >= 3:
+            username = parts[0]
+            domain = '.'.join(parts[1:-3])
+            return f"@{username}@{domain} (Bridgy)"
+        else:
+            return f"@{handle}"
+    else:
+        return handle
+    
+def fed_to_bridgy(handle:str):
+    if "@" in handle:
+        parts = handle.split('@')
+        if len(parts) >= 3: # If given a Fediverse handle, output the Bridgy handle
+            username = parts[1]
+            domain = '.'.join(parts[2:])
+            return f"{username}.{domain}.ap.brid.gy"
+        else: # If given a normal Bluesky handle, output the handle ensuring there is no @ at the beginning
+            return handle.lstrip('@')
+    else:
+        return handle
+
 def send_dm(to,message):
     dm_client = client.with_bsky_chat_proxy()
     dm = dm_client.chat.bsky.convo
@@ -159,7 +183,7 @@ def bot_commands_handler():
                     send_dm(convo['last_message']['sender']['did'], message)
                 else:
                     config = get_config()
-                    subject = parts[1]
+                    subject = fed_to_bridgy(parts[1])
                     reposts_allowed = False
                     if len(parts) == 3 and parts[2].lower() == "true":
                         reposts_allowed = True
@@ -170,13 +194,20 @@ def bot_commands_handler():
                                 break
                     
                     if not IdResolver().handle.resolve(subject):
-                        message = "Invalid subject. Please provide a valid handle."
+                        message = ""
+                        if subject.endswith("ap.brid.gy"):
+                            message = f"Invalid subject handle. (You entered a Fediverse or Bridgy Fed handle; that user may not be using Bridgy Fed.)"
+                        if "threads.net" in subject:
+                            message = f"That's a Meta Threads handle. Threads users cannot follow Fediverse accounts yet, so Threads cannot work with Bridgy Fed."
+                        else:
+                            message = f"Invalid subject handle."
+                        
                         send_dm(convo['last_message']['sender']['did'], message)
                         continue
                     
                     config['user_watches'].append({'subject-handle': subject, 'receiver-handle': senderhandle, 'reposts-allowed': reposts_allowed, 'subject-did': IdResolver().handle.resolve(subject), 'receiver-did': convo['last_message']['sender']['did']})
                     save_config(config)
-                    message = f"Watching {subject} for new posts. Reposts allowed: {reposts_allowed}. You will be notified when the subject posts."
+                    message = f"Watching {bridgy_to_fed(subject)} for new posts. Reposts allowed: {reposts_allowed}. You will be notified when the subject posts."
                     send_dm(convo['last_message']['sender']['did'], message)
             elif convo['last_message']['text'].lower().startswith("!unwatch"):
                 parts = convo['last_message']['text'].split(' ')
@@ -185,17 +216,17 @@ def bot_commands_handler():
                     send_dm(convo['last_message']['sender']['did'], message)
                 else:
                     config = get_config()
-                    subject_handle = parts[1]
+                    subject_handle = fed_to_bridgy(parts[1])
                     receiver_handle = senderhandle
                     user_watches = config.get('user_watches', [])
                     new_user_watches = [watch for watch in user_watches if not (watch['subject-handle'] == subject_handle and watch['receiver-handle'] == receiver_handle)]
                     
                     if len(user_watches) == len(new_user_watches):
-                        message = f"No watch found for {subject_handle}."
+                        message = f"No watch found for {bridgy_to_fed(subject_handle)}."
                     else:
                         config['user_watches'] = new_user_watches
                         save_config(config)
-                        message = f"Stopped watching {subject_handle}."
+                        message = f"Stopped watching {bridgy_to_fed(subject_handle)}."
                     
                     send_dm(convo['last_message']['sender']['did'], message)
             
@@ -218,7 +249,7 @@ def bot_commands_handler():
                     message += "You are watching the following subjects:\n"
                     lines = []
                     for watch in user_watch_list:
-                        lines.append(f"- {watch['subject-handle']} (Reposts allowed: {watch['reposts-allowed']})")
+                        lines.append(f"- {bridgy_to_fed(watch['subject-handle'])} (Reposts allowed: {watch['reposts-allowed']})")
                     message += "\n".join(lines)
                 else:
                     message += "You are not watching any subjects."
