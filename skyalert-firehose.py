@@ -23,6 +23,9 @@ CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
 VERBOSE_PRINTING = False
 
+global terminate_event
+terminate_event = multiprocessing.Event()
+
 global client
 client = Client()
 
@@ -191,7 +194,7 @@ def _get_ops_by_type(commit: models.ComAtprotoSyncSubscribeRepos.Commit) -> defa
 def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing.Queue) -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)  # we handle it in the main process
 
-    while True:
+    while not terminate_event.is_set():
         try:
             message = pool_queue.get()
 
@@ -285,22 +288,8 @@ def signal_handler(_: int, __: FrameType) -> None:
     exit(0)
     
 def exception_handler():
-    print('Exception thrown. The script will clean up and exit...')
-
-    # Stop receiving new messages
-    firehose.stop()
-
-    # Drain the messages queue
-    while not queue.empty():
-        #print('Waiting for the queue to empty...')
-        time.sleep(0.2)
-
-    #print('Queue is empty. Gracefully terminating processes...')
-
-    pool.terminate()
-    pool.join()
-
-    exit(1) # This will make systemd restart the service
+    print('Exception thrown. The script will shut down.')
+    terminate_event.set()
 
 if __name__ == '__main__':
     global firehose
@@ -332,6 +321,9 @@ if __name__ == '__main__':
             # we are using updating the cursor state here because of multiprocessing
             # typically you can call client.update_params() directly on commit processing
             firehose.update_params(get_firehose_params(cursor))
+            
+        if terminate_event.is_set():
+            exit(1)
 
         queue.put(message)
 
