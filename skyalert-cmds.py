@@ -185,8 +185,8 @@ def bot_commands_handler():
                     config = get_config()
                     subject = fed_to_bridgy(parts[1])
                     reposts_allowed = False
-                    if len(parts) == 3 and parts[2].lower() == "true":
-                        reposts_allowed = True
+                    if len(parts) == 3:
+                        reposts_allowed = parts[2].lower() == "true"
                     else:
                         for entry in config.get('repost_defaults', []):
                             if entry['did'] == convo['last_message']['sender']['did']:
