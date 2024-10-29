@@ -215,7 +215,21 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         post = created_post['record']
                         profile = client.get_profile(created_post['author'])
                         post_url = post_url_from_at_uri(created_post['uri'])
-                        message1 = f"{profile.handle} said: {post['text'].replace("\n", " ")}"
+                        message1 = f"{profile.handle} said: \"{post['text'].replace("\n", " ")}\""
+                        
+                        if post.reply is not None: message1 += f" [is a reply]"
+                        
+                        if post.labels is not None: message1 += f" [content warning]"
+                        
+                        if post.embed is not None:
+                            if post.embed.py_type == "app.bsky.embed.images": message1 += f" [has images]"
+                            if post.embed.py_type == "app.bsky.embed.video": message1 += f" [has video]"
+                            if post.embed.py_type == "app.bsky.embed.external":
+                                if "tenor.com" in post.embed.external.uri: message1 += f" [has GIF]"
+                                else: message1 += f" [link preview]"
+                            if post.embed.py_type == "app.bsky.embed.record": message1 += f" [quote repost]"
+                        
+                        
                         message2 = f"Link to post: {post_url}"
                         send_dm(watch['receiver-did'], message1)
                         send_dm(watch['receiver-did'], message2)
