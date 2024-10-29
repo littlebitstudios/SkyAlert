@@ -273,73 +273,46 @@ def bot_commands_handler():
 
 # main logic
 def main():
-    # logic for user watches (receiver is notified when subject posts)
-    # user watches are now run by firehose
-    # if VERBOSE_PRINTING: print("Checking user watches...")
-    # for watch in get_config().get('user_watches'):
-    #     if VERBOSE_PRINTING: print(f"Checking watch for {watch.get('subject')} with receiver {watch.get('receiver')}...")
-    #     if VERBOSE_PRINTING: print("Verifying DIDs...")
-    #     subject_did = ""
-    #     if not "did:plc:" in watch.get('subject'):
-    #         subject_did = IdResolver().handle.resolve(watch.get('subject'))
-    #     else:
-    #         subject_did = watch.get('subject')
-        
-    #     receiver_did = ""
-    #     if not "did:plc:" in watch.get('receiver'):
-    #         receiver_did = IdResolver().handle.resolve(watch.get('receiver'))
-    #     else:
-    #         receiver_did = watch.get('receiver')
+    # verify user watch validity
+    if VERBOSE_PRINTING: print("Checking user watches...")
+    for watch in get_config().get('user_watches'):
+        if VERBOSE_PRINTING: print(f"Checking watch for {watch.get('subject')} with receiver {watch.get('receiver')}...")
+        if VERBOSE_PRINTING: print("Verifying DIDs...")
+        receiver_did = watch.get('receiver-did')
+        subject_did = watch.get('subject-did')
+        receiver_handle = watch.get('receiver-handle')
+        subject_handle = watch.get('subject-handle')
             
-    #     if receiver_did == None or receiver_did == "":
-    #         if VERBOSE_PRINTING: print("Invalid receiver, all watches for this receiver will be removed...")
-    #         config = get_config()
-    #         config['user_watches'] = [w for w in config['user_watches'] if w['receiver'] != watch.get('receiver')]
-    #         save_config(config)
-    #         continue
+        if receiver_did == None or receiver_did == "":
+            if VERBOSE_PRINTING: print("Invalid receiver, all watches for this receiver will be removed...")
+            config = get_config()
+            config['user_watches'] = [w for w in config['user_watches'] if w['receiver'] != watch.get('receiver')]
+            save_config(config)
+            continue
             
-    #     if subject_did == None or subject_did == "":
-    #         if VERBOSE_PRINTING: print("Invalid subject, the watch will be removed...")
-    #         send_dm(receiver_did, f"You're no longer watching {watch.get('subject')} because the handle is invalid.")
-    #         config = get_config()
-    #         config['user_watches'] = [w for w in config['user_watches'] if not (w['subject'] == watch.get('subject') and w['receiver'] == watch.get('receiver'))]
-    #         save_config(config)
-    #         continue
+        if subject_did == None or subject_did == "":
+            if VERBOSE_PRINTING: print("Invalid subject, the watch will be removed...")
+            send_dm(receiver_did, f"You're no longer watching {watch.get('subject-handle')} because the handle is invalid.")
+            config = get_config()
+            config['user_watches'] = [w for w in config['user_watches'] if not (w['subject'] == watch.get('subject') and w['receiver'] == watch.get('receiver'))]
+            save_config(config)
+            continue
         
-    #     if VERBOSE_PRINTING: print("Checking last run...")
-    #     last_run = get_last_run()
-        
-    #     if last_run is None:
-    #         last_run = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
-        
-    #     if VERBOSE_PRINTING: print("Pulling subject feed...")
-    #     # get the subject's last 50 author feed items, no reposts/replies
-    #     subjectfeed = client.get_author_feed(actor=subject_did, limit=50, filter="posts_no_replies")
-    #     subjectfeed_dict = subjectfeed.model_dump()
-        
-    #     if VERBOSE_PRINTING: print("Checking for new posts...")
-    #     for item in subjectfeed_dict['feed']:
-    #         if item['post']['author']['did'] != subject_did:
-    #             if watch.get('reposts-allowed', False):
-    #                 if datetime.datetime.fromisoformat(item['post']['record']['created_at'].replace("Z", "+00:00")) < last_run:
-    #                     if VERBOSE_PRINTING: print("Post is older than last run, skipping...")
-    #                     continue
-    #                 else:
-    #                     if VERBOSE_PRINTING: print("New post found, sending DM...")
-    #                     post_text = item['post']['record']['text'].replace('\n', ' ')
-    #                     message = f"{watch.get('subject')} reposted {item['post']['author']['handle']} saying: \"{post_text}\".\nView post: {post_url_from_at_uri(item['post']['uri'])}"
-    #                     send_dm(receiver_did, message)
-    #             else:
-    #                 if VERBOSE_PRINTING: print("Post is a repost, skipping...")
-    #                 continue
-    #         elif datetime.datetime.fromisoformat(item['post']['record']['created_at'].replace("Z", "+00:00")) < last_run:
-    #             if VERBOSE_PRINTING: print("Post is older than last run, skipping...")
-    #             continue # Discard posts before last run
-    #         else:
-    #             if VERBOSE_PRINTING: print("New post found, sending DM...")
-    #             post_text = item['post']['record']['text'].replace('\n', ' ')
-    #             message = f"{watch.get('subject')} said \"{post_text}\".\nView post: {post_url_from_at_uri(item['post']['uri'])}"
-    #             send_dm(receiver_did, message)
+        subject_profile = client.get_profile(subject_did).model_dump()
+        if subject_profile['handle'] != subject_handle:
+            config = get_config()
+            for watch in config['user_watches']:
+                if watch['subject-did'] == subject_did:
+                    watch['subject-handle'] = subject_profile['handle']
+            save_config(config)
+            
+        receiver_profile = client.get_profile(receiver_did).model_dump()
+        if receiver_profile['handle'] != receiver_handle:
+            config = get_config()
+            for watch in config['user_watches']:
+                if watch['receiver-did'] == receiver_did:
+                    watch['receiver-handle'] = receiver_profile['handle']
+            save_config(config)
     
     # logic for follow watches (user is notified when someone unfollows them)
     # this does not need to be real-time, so it can run by polling
