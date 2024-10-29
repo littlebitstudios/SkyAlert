@@ -196,11 +196,13 @@ def bot_commands_handler():
                     if not IdResolver().handle.resolve(subject):
                         message = ""
                         if subject.endswith("ap.brid.gy"):
-                            message = f"Invalid subject handle. (You entered a Fediverse or Bridgy Fed handle; that user may not be using Bridgy Fed.)"
-                        if "threads.net" in subject:
-                            message = f"That's a Meta Threads handle. Threads users cannot follow Fediverse accounts yet, so Threads cannot work with Bridgy Fed."
+                            message = f"Invalid subject handle. You entered a Fediverse or Bridgy Fed handle; that user may not be using Bridgy Fed."
+                        elif "threads.net" in subject:
+                            message = f"Invalid subject handle. Meta Threads users cannot follow Fediverse accounts yet, so Threads cannot work with Bridgy Fed."
+                        elif not subject.endswith(".bsky.social"):
+                            message = f"Invalid subject handle. Most Bluesky handles end in .bsky.social, try adding that."
                         else:
-                            message = f"Invalid subject handle."
+                            message = f"Invalid subject handle. There was no other reason the handle could be invalid, so that user likely does not exist or you made a typo."
                         
                         send_dm(convo['last_message']['sender']['did'], message)
                         continue
