@@ -432,13 +432,13 @@ def main_with_retry():
     main()
     
 time_waited = 0
-cmd_check_interval = 60
-main_interval = 14400 # 4 hours
+cmd_check_interval = 30
+main_interval = 3600
 while True:
     if time_waited % cmd_check_interval == 0: # this script continues to handle bot commands
         bot_commands_handler_with_retry()
     if time_waited % main_interval == 0: # this only handles follow watches
-         main_with_retry()
+        main_with_retry()
         
     if time_waited == main_interval:
         time_waited = 0
