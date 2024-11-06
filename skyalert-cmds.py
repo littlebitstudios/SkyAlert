@@ -409,7 +409,7 @@ def main():
                     profile_fail = True
             
             message += "\n".join(profile_lines)
-            if profile_fail: message += "\n\nSome profiles could not be loaded, so their handles are replaced by a DID. Someone deleted their account, or something else went wrong."
+            if profile_fail: message += "\n\nSome profiles could not be loaded, so their handles are replaced by a DID. This usually happens when someone deletes their account or their account was suspended by the Bluesky team."
             send_dm(user_did, message)
         
         if VERBOSE_PRINTING: print("Saving follower cache...")
