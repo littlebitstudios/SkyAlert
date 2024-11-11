@@ -125,26 +125,32 @@ def post_url_from_at_uri(at_uri):
     url = f"https://bsky.app/profile/{did}/post/{random_string}"
     return url
 
-def bridgy_to_fed(handle:str):
+def bridgy_to_fed(handle: str):
     if handle.endswith("ap.brid.gy"):
         parts = handle.split('.')
         if len(parts) >= 3:
             username = parts[0]
             domain = '.'.join(parts[1:-3])
             return f"@{username}@{domain} (Bridgy)"
-        return handle
+        else:
+            return f"@{handle}"
     else:
+        if handle.endswith("bsky.social"):
+            handle = handle[:-12]  # Remove ".bsky.social" from the end
         return handle
     
-def fed_to_bridgy(handle:str):
+def fed_to_bridgy(handle: str):
     if "@" in handle:
         parts = handle.split('@')
-        if len(parts) >= 3:
+        if len(parts) >= 3:  # If given a Fediverse handle, output the Bridgy handle
             username = parts[1]
             domain = '.'.join(parts[2:])
             return f"{username}.{domain}.ap.brid.gy"
-        return handle
+        else:  # If given a normal Bluesky handle, output the handle ensuring there is no @ at the beginning
+            return handle.lstrip('@')
     else:
+        if not handle.endswith("bsky.social") and '.' not in handle:
+            handle += ".bsky.social"
         return handle
 
 def send_dm(to,message):
@@ -239,7 +245,12 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         post_url = post_url_from_at_uri(created_post['uri'])
                         message1 = f"{bridgy_to_fed(profile.handle)} said: \"{post['text'].replace("\n", " ")}\""
                         
-                        if post.reply is not None: message1 += f" [is a reply]"
+                        if post.reply is not None: 
+                            message1 += f" [is a reply]"
+                            for reply_setting in get_config()['reply_settings']:
+                                if reply_setting['did'] == watch['receiver-did'] and not reply_setting['replies-allowed']:
+                                    if VERBOSE_PRINTING: print(f"Skipping sending reply to {watch['receiver-did']} as replies are disabled.")
+                                    continue
                         
                         if post.labels is not None: message1 += f" [content warning]"
                         

@@ -99,7 +99,7 @@ def post_url_from_at_uri(at_uri):
     url = f"https://bsky.app/profile/{did}/post/{random_string}"
     return url
 
-def bridgy_to_fed(handle:str):
+def bridgy_to_fed(handle: str):
     if handle.endswith("ap.brid.gy"):
         parts = handle.split('.')
         if len(parts) >= 3:
@@ -109,18 +109,22 @@ def bridgy_to_fed(handle:str):
         else:
             return f"@{handle}"
     else:
+        if handle.endswith("bsky.social"):
+            handle = handle[:-12]  # Remove ".bsky.social" from the end
         return handle
     
-def fed_to_bridgy(handle:str):
+def fed_to_bridgy(handle: str):
     if "@" in handle:
         parts = handle.split('@')
-        if len(parts) >= 3: # If given a Fediverse handle, output the Bridgy handle
+        if len(parts) >= 3:  # If given a Fediverse handle, output the Bridgy handle
             username = parts[1]
             domain = '.'.join(parts[2:])
             return f"{username}.{domain}.ap.brid.gy"
-        else: # If given a normal Bluesky handle, output the handle ensuring there is no @ at the beginning
+        else:  # If given a normal Bluesky handle, output the handle ensuring there is no @ at the beginning
             return handle.lstrip('@')
     else:
+        if not handle.endswith("bsky.social") and '.' not in handle:
+            handle += ".bsky.social"
         return handle
 
 def send_dm(to,message):
@@ -174,7 +178,7 @@ def bot_commands_handler():
             senderhandle = senderprofile['handle']
             
             if convo['last_message']['text'].lower() == "!help":
-                message = "SkyAlert is a bot that can notify you about posts from people you watch or if someone unfollows you. To set up a watch, send me a DM with the following commands:\n\n!watch <subject> [reposts-allowed] - Watch a subject for new posts. You will be notified when the subject posts. If reposts-allowed is true, you will be notified on reposts.\n!unwatch <subject> - Stop watching a subject.\n!mywatches - List the subjects you are watching and the status of the follow watch feature.\n!repost-default <true/false> - Set the default reposts-allowed setting for new watches.\n!followwatch <true/false> - Enable or disable notifications for unfollows."
+                message = "SkyAlert is a bot that can notify you about posts from people you watch or if someone unfollows you. To set up a watch, send me a DM with the following commands:\n\n!watch <subject> [reposts-allowed] - Watch a subject for new posts. You will be notified when the subject posts. If reposts-allowed is true, you will be notified on reposts.\n!unwatch <subject> - Stop watching a subject.\n!mywatches - List the subjects you are watching and the status of the follow watch feature.\n!repost-default <true/false> - Set the default reposts-allowed setting for new watches.\n!followwatch <true/false> - Enable or disable notifications for unfollows. You will be notified when someone unfollows you.\n!replies <true/false> - If this is true, you will see replies posted by the subjects you are watching."
                 send_dm(convo['last_message']['sender']['did'], message)
             elif convo['last_message']['text'].lower().startswith("!watch"):
                 parts = convo['last_message']['text'].split(' ')
@@ -301,6 +305,25 @@ def bot_commands_handler():
                     
                     config['follow_watches'] = follow_watches
                     save_config(config)
+                    send_dm(convo['last_message']['sender']['did'], message)
+            elif convo['last_message']['text'].lower() == "!replies":
+                parts = convo['last_message']['text'].split(' ')
+                if len(parts) != 2 or parts[1] == "":
+                    current_setting = next((entry['replies-allowed'] for entry in get_config().get('reply_settings', []) if entry['did'] == convo['last_message']['sender']['did']), None)
+                    message = f"Not enough arguments. Usage: !replies <true/false>\nCurrent setting: {current_setting}"
+                    send_dm(convo['last_message']['sender']['did'], message)
+                else:
+                    config = get_config()
+                    replies_allowed = parts[1].lower() == "true"
+                    reply_settings = config.get('reply_settings', [])
+                    
+                    if any(entry['did'] == convo['last_message']['sender']['did'] for entry in reply_settings):
+                        reply_settings = [entry for entry in reply_settings if entry['did'] != convo['last_message']['sender']['did']]
+                    
+                    reply_settings.append({'did': convo['last_message']['sender']['did'], 'replies-allowed': replies_allowed})
+                    config['reply_settings'] = reply_settings
+                    save_config(config)
+                    message = f"Replies allowed setting set to {replies_allowed}."
                     send_dm(convo['last_message']['sender']['did'], message)
                 
 
