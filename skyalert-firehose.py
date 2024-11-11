@@ -288,16 +288,35 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
             for created_repost in ops[models.ids.AppBskyFeedRepost]['created']:
                 for watch in get_config()['user_watches']:
                     if watch['subject-did'] == created_repost['author'] and watch['reposts-allowed']:
+                        if VERBOSE_PRINTING: print(f"Processing repost from {created_repost['author']} for watcher {watch['receiver-did']}")
                         post = created_repost['record']
                         reposter_handle = watch['subject-handle']
                         reposted_profile = client.get_profile(post['subject'].uri.split('/')[2])
                         post_url = post_url_from_at_uri(post['subject'].uri)
-                        message = f"{bridgy_to_fed(reposter_handle)} reposted {bridgy_to_fed(reposted_profile.handle)}\n{post_url}"
-                        send_dm(watch['receiver-did'], message)
+                        post = client.get_post_thread(post['subject'].uri)
+                        message1 = f"{bridgy_to_fed(reposter_handle)} reposted {bridgy_to_fed(reposted_profile.handle)} saying: {post.thread.post.record.text.replace('\n', ' ')}"
+                        
+                        if post.thread.post.embed is not None:
+                            if post.thread.post.embed.images is not None:
+                                message1 += f" [has images]"
+                            if post.thread.post.embed.py_type.startswith("app.bsky.embed.video"):
+                                message1 += f" [has video]"
+                            if post.thread.post.embed.external is not None:
+                                if "tenor.com" in post.thread.post.embed.external.uri:
+                                    message1 += f" [has GIF]"
+                                else:
+                                    message1 += f" [link preview]"
+                        if post.thread.post.labels:
+                            message1 += f" [content warning]"
+                        
+                        message2 = f"Link to post: {post_url}"
+                        send_dm(watch['receiver-did'], message1)
+                        send_dm(watch['receiver-did'], message2)
+                        if VERBOSE_PRINTING: print(f"Successfully sent messages to {watch['receiver-did']}")
             
             # Deleted follow logic is not implemented yet; the unfollower can be found but not the person who was unfollowed
-        except:
-            exception_handler()
+        except Exception as e:
+            exception_handler(e)
                     
         
 def get_firehose_params(cursor_value: multiprocessing.Value) -> models.ComAtprotoSyncSubscribeRepos.Params:
@@ -340,8 +359,9 @@ def signal_handler(_: int, __: FrameType) -> None:
 
     exit(0)
     
-def exception_handler():
+def exception_handler(e: Exception) -> None:
     print('Exception thrown. The script will shut down.')
+    print(f"Exception: {e}")
     terminate_event.set()
 
 if __name__ == '__main__':
