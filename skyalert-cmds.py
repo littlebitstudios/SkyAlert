@@ -178,9 +178,11 @@ def bot_commands_handler():
             senderhandle = senderprofile['handle']
             
             if convo['last_message']['text'].lower() == "!help":
+                if VERBOSE_PRINTING: print(f"Sending help message to {senderhandle}...")
                 message = "SkyAlert is a bot that can notify you about posts from people you watch or if someone unfollows you. To set up a watch, send me a DM with the following commands:\n\n!watch <subject> [reposts-allowed] - Watch a subject for new posts. You will be notified when the subject posts. If reposts-allowed is true, you will be notified on reposts.\n!unwatch <subject> - Stop watching a subject.\n!mywatches - List the subjects you are watching and the status of the follow watch feature.\n!repost-default <true/false> - Set the default reposts-allowed setting for new watches.\n!followwatch <true/false> - Enable or disable notifications for unfollows. You will be notified when someone unfollows you.\n!replies <true/false> - If this is true, you will see replies posted by the subjects you are watching."
                 send_dm(convo['last_message']['sender']['did'], message)
             elif convo['last_message']['text'].lower().startswith("!watch"):
+                if VERBOSE_PRINTING: print(f"Processing watch command from {senderhandle}...")
                 parts = convo['last_message']['text'].split(' ')
                 if len(parts) < 2:
                     message = "Not enough arguments. Usage: !watch <subject> [reposts-allowed]"
@@ -216,6 +218,7 @@ def bot_commands_handler():
                     message = f"Watching {bridgy_to_fed(subject)} for new posts. Reposts allowed: {reposts_allowed}. You will be notified when the subject posts."
                     send_dm(convo['last_message']['sender']['did'], message)
             elif convo['last_message']['text'].lower().startswith("!unwatch"):
+                if VERBOSE_PRINTING: print(f"Processing unwatch command from {senderhandle}...")
                 parts = convo['last_message']['text'].split(' ')
                 if len(parts) != 2 or parts[1] == "":
                     message = "Not enough arguments. Usage: !unwatch <subject>"
@@ -237,6 +240,7 @@ def bot_commands_handler():
                     send_dm(convo['last_message']['sender']['did'], message)
             
             elif convo['last_message']['text'].lower() == "!mywatches":
+                if VERBOSE_PRINTING: print(f"Processing mywatches command from {senderhandle}...")
                 config = get_config()
                 follow_watches = config.get('follow_watches', [])
                 user_watches = config.get('user_watches', [])
@@ -261,7 +265,8 @@ def bot_commands_handler():
                     message += "You are not watching any subjects."
 
                 send_dm(convo['last_message']['sender']['did'], message)
-            elif convo['last_message']['text'].lower() == "!repost-default":
+            elif convo['last_message']['text'].lower().startswith("!repost-default"):
+                if VERBOSE_PRINTING: print(f"Processing repost-default command from {senderhandle}...")
                 parts = convo['last_message']['text'].split(' ')
                 if len(parts) != 2 or parts[1] == "":
                     current_default = next((entry['reposts-allowed'] for entry in get_config().get('repost_defaults', []) if entry['did'] == convo['last_message']['sender']['did']), None)
@@ -281,6 +286,7 @@ def bot_commands_handler():
                     message = f"Default reposts-allowed setting set to {repost_default}."
                     send_dm(convo['last_message']['sender']['did'], message)
             elif convo['last_message']['text'].lower().startswith("!followwatch"):
+                if VERBOSE_PRINTING: print(f"Processing followwatch command from {senderhandle}...")
                 parts = convo['last_message']['text'].split(' ')
                 if len(parts) != 2 or parts[1] == "":
                     message = "Not enough arguments. Usage: !followwatch <true/false>"
@@ -306,7 +312,8 @@ def bot_commands_handler():
                     config['follow_watches'] = follow_watches
                     save_config(config)
                     send_dm(convo['last_message']['sender']['did'], message)
-            elif convo['last_message']['text'].lower() == "!replies":
+            elif convo['last_message']['text'].lower().startswith("!replies"):
+                if VERBOSE_PRINTING: print(f"Processing replies command from {senderhandle}...")
                 parts = convo['last_message']['text'].split(' ')
                 if len(parts) != 2 or parts[1] == "":
                     current_setting = next((entry['replies-allowed'] for entry in get_config().get('reply_settings', []) if entry['did'] == convo['last_message']['sender']['did']), None)

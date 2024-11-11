@@ -247,10 +247,17 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         
                         if post.reply is not None: 
                             message1 += f" [is a reply]"
-                            for reply_setting in get_config()['reply_settings']:
-                                if reply_setting['did'] == watch['receiver-did'] and not reply_setting['replies-allowed']:
-                                    if VERBOSE_PRINTING: print(f"Skipping sending reply to {watch['receiver-did']} as replies are disabled.")
-                                    continue
+                            reply_settings = get_config().get('reply_settings', [])
+                            reply_allowed = False  # Default to blocking replies if no entry exists
+
+                            for reply_setting in reply_settings:
+                                if reply_setting['did'] == watch['receiver-did']:
+                                    reply_allowed = reply_setting['replies-allowed']
+                                    break
+
+                            if not reply_allowed:
+                                if VERBOSE_PRINTING: print(f"Skipping sending reply to {watch['receiver-did']} as replies are disabled.")
+                                continue
                         
                         if post.labels is not None: message1 += f" [content warning]"
                         
