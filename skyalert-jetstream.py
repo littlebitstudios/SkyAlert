@@ -16,7 +16,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.yaml')
 CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
-VERBOSE_PRINTING = True
+VERBOSE_PRINTING = False
 
 global client
 client = AsyncClient()
