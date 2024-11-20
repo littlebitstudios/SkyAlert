@@ -1,3 +1,5 @@
 atproto
 pyyaml
 tenacity
+aiohttp
+aiofiles

@@ -1,11 +1,11 @@
 [Unit]
-Description=SkyAlert Bot - Command Handler
+Description=SkyAlert Bot - Jetstream Handler
 After=network.target
 
 # Change ExecStart to the correct path for your venv and script
 [Service]
 Type=simple
-ExecStart=/home/jaherron/code/python/skyalert/.venv/bin/python /home/jaherron/code/python/skyalert/skyalert-cmds.py
+ExecStart=/home/jaherron/code/python/skyalert/.venv/bin/python /home/jaherron/code/python/skyalert/skyalert-jetstream.py
 Restart=always
 RuntimeMaxSec=86400
 
