@@ -14,6 +14,7 @@ CONFIG_FILE = os.path.join(DATA_DIR, 'config.yaml')
 CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
 VERBOSE_PRINTING = False
+MAINTAINER_DIDS = ["did:plc:big6e357j2bbrlkyms5vjkgf"]
 
 global client
 client = Client()
@@ -238,7 +239,6 @@ def bot_commands_handler():
                         message = f"Stopped watching {bridgy_to_fed(subject_handle)}."
                     
                     send_dm(convo['last_message']['sender']['did'], message)
-            
             elif convo['last_message']['text'].lower() == "!mywatches":
                 if VERBOSE_PRINTING: print(f"Processing mywatches command from {senderhandle}...")
                 config = get_config()
@@ -331,6 +331,15 @@ def bot_commands_handler():
                     config['reply_settings'] = reply_settings
                     save_config(config)
                     message = f"Replies allowed setting set to {replies_allowed}."
+                    send_dm(convo['last_message']['sender']['did'], message)
+            elif convo['last_message']['text'].lower() == "!post-restart":
+                if VERBOSE_PRINTING: print(f"Processing post-restart command from {senderhandle}...")
+                if convo['last_message']['sender']['did'] in MAINTAINER_DIDS:
+                    os.system("systemctl restart skyalert-firehose")
+                    message = "Post service restarted."
+                    send_dm(convo['last_message']['sender']['did'], message)
+                else:
+                    message = "You are not LittleBit or someone he trusts. If post notifications have stopped, DM or ping @littlebitstudios.com."
                     send_dm(convo['last_message']['sender']['did'], message)
                 
 
