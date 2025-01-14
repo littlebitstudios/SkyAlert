@@ -20,7 +20,7 @@ import tenacity
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.yaml')
 CACHE_DIR = os.path.join(DATA_DIR, 'cache')
-LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
+LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run-firehose.txt')
 VERBOSE_PRINTING = False
 
 global terminate_event
@@ -272,18 +272,6 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         message2 = f"Link to post: {post_url}"
                         send_dm(watch['receiver-did'], message1)
                         send_dm(watch['receiver-did'], message2)
-
-            # # The followers cache is disabled; it was required only for follow watching.
-            # for created_follow in ops[models.ids.AppBskyGraphFollow]['created']:
-            #     author = created_follow['author']
-            #     record = created_follow['record']
-            #     uri = created_follow['uri']
-                
-            #     for watch in get_config()['follow_watches']:
-            #         if watch['did'] == record['subject']:
-            #             followers_cache = get_followers_cache(record['subject'])
-            #             followers_cache.append(author)
-            #             save_followers_cache(record['subject'], followers_cache)
                         
             for created_repost in ops[models.ids.AppBskyFeedRepost]['created']:
                 for watch in get_config()['user_watches']:
@@ -314,7 +302,7 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         send_dm(watch['receiver-did'], message2)
                         if VERBOSE_PRINTING: print(f"Successfully sent messages to {watch['receiver-did']}")
             
-            # Deleted follow logic is not implemented yet; the unfollower can be found but not the person who was unfollowed
+            save_last_run()
         except Exception as e:
             exception_handler(e)
                     

@@ -89,6 +89,15 @@ def get_last_run():
 def save_last_run():
     with open(LAST_RUN_FILE, 'w') as f:
         f.write(datetime.datetime.now(datetime.timezone.utc).isoformat())
+        
+def firehose_check():
+    if os.path.exists(os.path.join(DATA_DIR, 'last_run-firehose.txt')):
+        with open(os.path.join(DATA_DIR, 'last_run-firehose.txt'), 'r') as f:
+            last_run = datetime.datetime.fromisoformat(f.read())
+            if datetime.datetime.now(datetime.timezone.utc) - last_run > datetime.timedelta(minutes=10):
+                return True
+            else:
+                return False
     
 def post_url_from_at_uri(at_uri):
     # Split the AT URI to extract the DID and the random string
@@ -345,6 +354,10 @@ def bot_commands_handler():
 
 # main logic
 def main():
+    # restart the post notifications module if it hasn't been responding for 10 minutes
+    if firehose_check():
+        os.system("systemctl restart skyalert-firehose")
+    
     # verify user watch validity
     if VERBOSE_PRINTING: print("Checking user watches...")
     for watch in get_config().get('user_watches'):
