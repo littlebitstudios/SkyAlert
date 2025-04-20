@@ -55,7 +55,7 @@ with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
         dm_client = client.with_bsky_chat_proxy()
 
 # Link detection by latchk3y on the Bluesky API Discord server
-def get_facets(text):
+def get_facets_from_links(text):
     pattern = r'(https?://[^\s]+)'
     links = re.findall(pattern, text)
 
@@ -75,12 +75,62 @@ def get_facets(text):
                     "uri": link
                 }
             ]
-        })
-
-    if not facets:
-        return None  
+        })  
 
     return facets
+
+def get_facets_from_markdown(text):
+    pattern = r'\[([^\]]+)\]\((https?://[^\s]+)\)'
+    facets = []
+    filtered_text = text
+
+    match = re.search(pattern, filtered_text)
+    while match:
+        link_text, link_url = match.groups()
+        start_index = match.start()
+        end_index = match.end()
+
+        filtered_text = filtered_text[:start_index] + link_text + filtered_text[end_index:]
+        new_start_index = start_index
+        new_end_index = new_start_index + len(link_text)
+
+        facets.append({
+            "index": {
+                "byteStart": new_start_index,
+                "byteEnd": new_end_index
+            },
+            "features": [
+                {
+                    "$type": "app.bsky.richtext.facet#link",
+                    "uri": link_url
+                }
+            ]
+        })
+
+        match = re.search(pattern, filtered_text)
+
+    # Extract links from the filtered text
+    link_pattern = r'(https?://[^\s]+)'
+    links = re.findall(link_pattern, filtered_text)
+
+    for link in links:
+        start_index = filtered_text.index(link)
+        end_index = start_index + len(link)
+        
+        facets.append({
+            "index": {
+                "byteStart": start_index,
+                "byteEnd": end_index
+            },
+            "features": [
+                {
+                    "$type": "app.bsky.richtext.facet#link",
+                    "uri": link
+                }
+            ]
+        })
+
+    return {"facets": facets, "filtered_text": filtered_text}
 
 def get_config():
     if not os.path.exists(CONFIG_FILE):
@@ -167,13 +217,16 @@ def send_dm(to,message):
         models.ChatBskyConvoGetConvoForMembers.Params(members=[chat_to, client.me.did]),
     ).convo
     
+    # filter markdown links from text and get facets
+    content = get_facets_from_markdown(message)
+    
     # send a message to the conversation
     dm.send_message(
         models.ChatBskyConvoSendMessage.Data(
             convo_id=convo.id,
             message=models.ChatBskyConvoDefs.MessageInput(
-                text=message,
-                facets=get_facets(message)
+                text=content["filtered_text"],
+                facets=content["facets"]
             ),
         )
     )
@@ -243,7 +296,7 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         post = created_post['record']
                         profile = client.get_profile(created_post['author'])
                         post_url = post_url_from_at_uri(created_post['uri'])
-                        message1 = f"{bridgy_to_fed(profile.handle)} said: \"{post['text'].replace("\n", " ")}\""
+                        message1 = f"[{bridgy_to_fed(profile.handle)}](https://bsky.app/profile/{profile.did}) said - [click to view]({post_url}): \"{post['text'].replace("\n", " ")}\""
                         
                         if post.reply is not None: 
                             message1 += f" [is a reply]"
@@ -268,10 +321,10 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                                 if "tenor.com" in post.embed.external.uri: message1 += f" [has GIF]"
                                 else: message1 += f" [link preview]"
                             if post.embed.py_type == "app.bsky.embed.record": message1 += f" [quote repost]"
-                        
-                        message2 = f"Link to post: {post_url}"
+                            
+                        #message2 = f"Link to post: {post_url}"
                         send_dm(watch['receiver-did'], message1)
-                        send_dm(watch['receiver-did'], message2)
+                        #send_dm(watch['receiver-did'], message2)
                         
             for created_repost in ops[models.ids.AppBskyFeedRepost]['created']:
                 for watch in get_config()['user_watches']:
@@ -282,7 +335,7 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         reposted_profile = client.get_profile(post['subject'].uri.split('/')[2])
                         post_url = post_url_from_at_uri(post['subject'].uri)
                         post = client.get_post_thread(post['subject'].uri)
-                        message1 = f"{bridgy_to_fed(reposter_handle)} reposted {bridgy_to_fed(reposted_profile.handle)} saying: {post.thread.post.record.text.replace('\n', ' ')}"
+                        message1 = f"[{bridgy_to_fed(reposter_handle)}](https://bsky.app/profile/{watch['subject-did']}) reposted [{bridgy_to_fed(reposted_profile.handle)}]([https://bsky.app/profile/{reposted_profile.did}]) saying - [click to view]({post_url}): {post.thread.post.record.text.replace('\n', ' ')}"
                         
                         if post.thread.post.embed is not None:
                             if post.thread.post.embed.images is not None:
@@ -297,9 +350,9 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                         if post.thread.post.labels:
                             message1 += f" [content warning]"
                         
-                        message2 = f"Link to post: {post_url}"
+                        #message2 = f"Link to post: {post_url}"
                         send_dm(watch['receiver-did'], message1)
-                        send_dm(watch['receiver-did'], message2)
+                        #send_dm(watch['receiver-did'], message2)
                         if VERBOSE_PRINTING: print(f"Successfully sent messages to {watch['receiver-did']}")
             
             save_last_run()

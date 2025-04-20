@@ -42,7 +42,7 @@ with open(os.path.join(DATA_DIR, 'login-info.yaml'), 'r') as f:
         client.login(login=login_info['username'], password=login_info['password'])
 
 # Link detection by latchk3y on the Bluesky API Discord server
-def get_facets(text):
+def get_facets_from_links(text):
     pattern = r'(https?://[^\s]+)'
     links = re.findall(pattern, text)
 
@@ -62,12 +62,62 @@ def get_facets(text):
                     "uri": link
                 }
             ]
-        })
-
-    if not facets:
-        return None  
+        })  
 
     return facets
+
+def get_facets_from_markdown(text):
+    pattern = r'\[([^\]]+)\]\((https?://[^\s]+)\)'
+    facets = []
+    filtered_text = text
+
+    match = re.search(pattern, filtered_text)
+    while match:
+        link_text, link_url = match.groups()
+        start_index = match.start()
+        end_index = match.end()
+
+        filtered_text = filtered_text[:start_index] + link_text + filtered_text[end_index:]
+        new_start_index = start_index
+        new_end_index = new_start_index + len(link_text)
+
+        facets.append({
+            "index": {
+                "byteStart": new_start_index,
+                "byteEnd": new_end_index
+            },
+            "features": [
+                {
+                    "$type": "app.bsky.richtext.facet#link",
+                    "uri": link_url
+                }
+            ]
+        })
+
+        match = re.search(pattern, filtered_text)
+
+    # Extract links from the filtered text
+    link_pattern = r'(https?://[^\s]+)'
+    links = re.findall(link_pattern, filtered_text)
+
+    for link in links:
+        start_index = filtered_text.index(link)
+        end_index = start_index + len(link)
+        
+        facets.append({
+            "index": {
+                "byteStart": start_index,
+                "byteEnd": end_index
+            },
+            "features": [
+                {
+                    "$type": "app.bsky.richtext.facet#link",
+                    "uri": link
+                }
+            ]
+        })
+
+    return {"facets": facets, "filtered_text": filtered_text}
 
 def get_config():
     if not os.path.exists(CONFIG_FILE):
@@ -151,13 +201,16 @@ def send_dm(to,message):
         models.ChatBskyConvoGetConvoForMembers.Params(members=[chat_to, client.me.did]),
     ).convo
     
+    # filter markdown links from text and get facets
+    content = get_facets_from_markdown(message)
+    
     # send a message to the conversation
     dm.send_message(
         models.ChatBskyConvoSendMessage.Data(
             convo_id=convo.id,
             message=models.ChatBskyConvoDefs.MessageInput(
-                text=message,
-                facets=get_facets(message)
+                text=content["filtered_text"],
+                facets=content["facets"]
             ),
         )
     )
@@ -453,7 +506,7 @@ def main():
             for did in unfollowed_dids:
                 try:    
                     profile = client.get_profile(did).model_dump()
-                    profile_lines.append(f"- {profile['handle']}")
+                    profile_lines.append(f"- [{profile['handle']}](https://bsky.app/profile/{did})")
                 except:
                     profile_lines.append(f"- {did}")
                     profile_fail = True
