@@ -434,20 +434,41 @@ def main():
             save_config(config)
             continue
         
-        subject_profile = client.get_profile(subject_did).model_dump()
-        if subject_profile['handle'] != subject_handle:
+        try:
+            subject_profile = client.get_profile(subject_did).model_dump()
+            if subject_profile['handle'] != subject_handle:
+                config = get_config()
+                for watch in config['user_watches']:
+                    if watch['subject-did'] == subject_did:
+                        watch['subject-handle'] = subject_profile['handle']
+                save_config(config)
+        except atproto_client.exceptions.BadRequestError as e:
+            if VERBOSE_PRINTING: print(f"Bad HTTP request when processing subject {subject_did}: {e}")
             config = get_config()
-            for watch in config['user_watches']:
-                if watch['subject-did'] == subject_did:
-                    watch['subject-handle'] = subject_profile['handle']
+            receivers_to_notify = [
+                watch['receiver-did'] for watch in config['user_watches'] if watch['subject-did'] == subject_did
+            ]
+            config['user_watches'] = [
+                watch for watch in config['user_watches'] if watch['subject-did'] != subject_did
+            ]
             save_config(config)
+            for receiver_did in receivers_to_notify:
+                send_dm(receiver_did, f"You are no longer watching {subject_handle} because the handle could not be verified. This usually happens when an account is deleted/deactivated by its user or suspended by Bluesky.")
             
-        receiver_profile = client.get_profile(receiver_did).model_dump()
-        if receiver_profile['handle'] != receiver_handle:
+        try:
+            receiver_profile = client.get_profile(receiver_did).model_dump()
+            if receiver_profile['handle'] != receiver_handle:
+                config = get_config()
+                for watch in config['user_watches']:
+                    if watch['receiver-did'] == receiver_did:
+                        watch['receiver-handle'] = receiver_profile['handle']
+                save_config(config)
+        except atproto_client.exceptions.BadRequestError as e:
+            if VERBOSE_PRINTING: print(f"Exception occurred while processing receiver {receiver_did}: {e}")
             config = get_config()
-            for watch in config['user_watches']:
-                if watch['receiver-did'] == receiver_did:
-                    watch['receiver-handle'] = receiver_profile['handle']
+            config['user_watches'] = [
+            watch for watch in config['user_watches'] if watch['receiver-did'] != receiver_did
+            ]
             save_config(config)
     
     # logic for follow watches (user is notified when someone unfollows them)
@@ -463,6 +484,15 @@ def main():
             if VERBOSE_PRINTING: print("Invalid user, watch will be removed...")
             config = get_config()
             config['follow_watches'] = [w for w in config['follow_watches'] if w != user]
+            save_config(config)
+            continue
+        
+        try:
+            client.get_profile(user_did)
+        except atproto_client.exceptions.BadRequestError as e:
+            if VERBOSE_PRINTING: print(f"Exception occurred while processing user {user_did}: {e}")
+            config = get_config()
+            config['follow_watches'] = [w for w in config['follow_watches'] if w['did'] != user_did]
             save_config(config)
             continue
         
