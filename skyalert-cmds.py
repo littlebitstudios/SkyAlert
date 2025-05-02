@@ -402,6 +402,17 @@ def bot_commands_handler():
                     message = "You are not LittleBit or someone he trusts. If post notifications have stopped, DM or ping @littlebitstudios.com."
                     send_dm(convo['last_message']['sender']['did'], message)
                 
+# dangling cache check; if someone has disabled follow watching, remove their followers cache
+def dangling_cache_check():
+    if VERBOSE_PRINTING: print("Checking for dangling caches...")
+    cached_files = [f for f in os.listdir(CACHE_DIR) if f.startswith("followers-") and f.endswith(".yaml")]
+    valid_dids = {watch['did'] for watch in get_config().get('follow_watches', [])}
+    
+    for cached_file in cached_files:
+        cached_did = cached_file[len("followers-"):-len(".yaml")]
+        if cached_did not in valid_dids:
+            if VERBOSE_PRINTING: print(f"Deleting dangling cache file: {cached_file}")
+            os.remove(os.path.join(CACHE_DIR, cached_file))
 
 # main logic
 def main():
@@ -577,6 +588,7 @@ while True:
     if time_waited % cmd_check_interval == 0: # this script continues to handle bot commands
         bot_commands_handler_with_retry()
     if time_waited % main_interval == 0: # this only handles follow watches
+        dangling_cache_check()
         main_with_retry()
         
     if time_waited == main_interval:
