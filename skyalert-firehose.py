@@ -318,7 +318,9 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                             if post.embed.py_type == "app.bsky.embed.images": message1 += f" [has images]"
                             if post.embed.py_type == "app.bsky.embed.video": message1 += f" [has video]"
                             if post.embed.py_type == "app.bsky.embed.external":
-                                if "tenor.com" in post.embed.external.uri: message1 += f" [has GIF]"
+                                from urllib.parse import urlparse
+                                parsed_uri = urlparse(post.embed.external.uri)
+                                if parsed_uri.hostname == "tenor.com": message1 += f" [has GIF]"
                                 else: message1 += f" [link preview]"
                             if post.embed.py_type == "app.bsky.embed.record": message1 += f" [quote repost]"
                             
