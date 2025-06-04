@@ -13,6 +13,7 @@ import os
 import datetime
 import re
 import tenacity
+from urllib.parse import urlparse
 
 # code from original skyalert file, now skyalert-cmds.py
 
@@ -318,7 +319,8 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                             if post.embed.py_type == "app.bsky.embed.images": message1 += f" [has images]"
                             if post.embed.py_type == "app.bsky.embed.video": message1 += f" [has video]"
                             if post.embed.py_type == "app.bsky.embed.external":
-                                if "tenor.com" in post.embed.external.uri: message1 += f" [has GIF]"
+                                parsed_uri = urlparse(post.embed.external.uri)
+                                if parsed_uri.hostname == "tenor.com": message1 += f" [has GIF]"
                                 else: message1 += f" [link preview]"
                             if post.embed.py_type == "app.bsky.embed.record": message1 += f" [quote repost]"
                             
@@ -343,7 +345,8 @@ def worker_main(cursor_value: multiprocessing.Value, pool_queue: multiprocessing
                             if post.thread.post.embed.py_type.startswith("app.bsky.embed.video"):
                                 message1 += f" [has video]"
                             if post.thread.post.embed.external is not None:
-                                if "tenor.com" in post.thread.post.embed.external.uri:
+                                parsed_uri = urlparse(post.thread.post.embed.external.uri)
+                                if parsed_uri.hostname == "tenor.com":
                                     message1 += f" [has GIF]"
                                 else:
                                     message1 += f" [link preview]"
