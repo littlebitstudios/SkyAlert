@@ -11,6 +11,7 @@ import time
 import re
 import aiohttp
 import aiofiles
+from urllib.parse import urlparse
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.yaml')
@@ -209,7 +210,8 @@ async def main(uri):
                                 if embed.get("$type") == "app.bsky.embed.video":
                                     message1 += " [has video]"
                                 if embed.get("$type") == "app.bsky.embed.external":
-                                    if "tenor.com" in embed.get("external").get("uri"):
+                                    parsed_uri = urlparse(embed.get("external").get("uri"))
+                                    if parsed_uri.hostname == "tenor.com":
                                         message1 += " [has GIF]"
                                     else:
                                         message1 += " [link preview]"
