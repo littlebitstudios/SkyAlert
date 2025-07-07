@@ -1,3 +1,8 @@
+# SkyAlert is discontinued
+Bluesky have introduced a post notifications feature in their own app, so SkyAlert is no longer needed.
+This repository is now an archive.
+
+----------------------------------
 # SkyAlert
 [![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/license-mit.svg)](https://forthebadge.com)
