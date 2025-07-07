@@ -1,4 +1,4 @@
-Bluesky have introduced a post notifications feature in their own app, so SkyAlert is no longer needed.
+Bluesky have introduced a post notifications feature in their own app, so SkyAlert is no longer needed for post notifications.
 SkyAlert will remain online because of the unfollowing notifications feature.
 
 ----------------------------------
