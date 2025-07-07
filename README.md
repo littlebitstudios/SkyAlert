@@ -1,6 +1,5 @@
-# SkyAlert is discontinued
 Bluesky have introduced a post notifications feature in their own app, so SkyAlert is no longer needed.
-This repository is now an archive.
+SkyAlert will remain online because of the unfollowing notifications feature.
 
 ----------------------------------
 # SkyAlert
