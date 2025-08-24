@@ -13,7 +13,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.yaml')
 CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 LAST_RUN_FILE = os.path.join(DATA_DIR, 'last_run.txt')
-VERBOSE_PRINTING = False
+VERBOSE_PRINTING = True
 MAINTAINER_DIDS = ["did:plc:big6e357j2bbrlkyms5vjkgf"]
 
 global client
