@@ -242,7 +242,7 @@ def bot_commands_handler():
             
             if convo['last_message']['text'].lower() == "!help":
                 if VERBOSE_PRINTING: print(f"Sending help message to {senderhandle}...")
-                message = "SkyAlert is a bot that can notify you about posts from people you watch or if someone unfollows you. To set up a watch, send me a DM with the following commands:\n\n!watch <subject> [reposts-allowed] - Watch a subject for new posts. You will be notified when the subject posts. If reposts-allowed is true, you will be notified on reposts.\n!unwatch <subject> - Stop watching a subject.\n!mywatches - List the subjects you are watching and the status of the follow watch feature.\n!repost-default <true/false> - Set the default reposts-allowed setting for new watches.\n!followwatch <true/false> - Enable or disable notifications for unfollows. You will be notified when someone unfollows you.\n!replies <true/false> - If this is true, you will see replies posted by the subjects you are watching."
+                message = "SkyAlert is a bot that can notify you about posts from people you watch or if someone unfollows you. To set up a watch, send me a DM with the following commands:\n\n!watch <subject> [reposts-allowed] - Watch a subject for new posts. You will be notified when the subject posts. If reposts-allowed is true, you will be notified on reposts.\n!unwatch <subject> - Stop watching a subject.\n!mywatches - List the subjects you are watching and the status of the follow watch feature.\n!repost-default <true/false> - Set the default reposts-allowed setting for new watches.\n!followwatch <true/false> - Enable or disable notifications for unfollows. You will be notified when someone unfollows you.\n!replies <true/false> - If this is true, you will see replies posted by the subjects you are watching.\n!reset - Delete all of your SkyAlert settings."
                 send_dm(convo['last_message']['sender']['did'], message)
             elif convo['last_message']['text'].lower().startswith("!watch"):
                 if VERBOSE_PRINTING: print(f"Processing watch command from {senderhandle}...")
@@ -401,6 +401,19 @@ def bot_commands_handler():
                 else:
                     message = "You are not LittleBit or someone he trusts. If post notifications have stopped, DM or ping @littlebitstudios.com."
                     send_dm(convo['last_message']['sender']['did'], message)
+            elif convo['last_message']['text'].lower() == "!reset":
+                if VERBOSE_PRINTING: print(f"Processing reset command from {senderhandle}...")
+                message = "This command will completely dissolve your relationship with SkyAlert. All user watches will be removed, follow watch will be disabled, and your preferences will be reset to default. If this is really what you want, type \"!reset yes\" to proceed."
+                send_dm(convo['last_message']['sender']['did'], message)
+            elif convo['last_message']['text'].lower() == "!reset yes":
+                config = get_config()
+                config['reply_settings'] = [entry for entry in config['reply_settings'] if entry['did'] != convo['last_message']['sender']['did']]
+                config['follow_watches'] = [watch for watch in config['follow_watches'] if watch['did'] != convo['last_message']['sender']['did']]
+                config['repost_defaults'] = [entry for entry in config['repost_defaults'] if entry['did'] != convo['last_message']['sender']['did']]
+                config['user_watches'] = [watch for watch in config['user_watches'] if not (watch['receiver-handle'] == convo['last_message']['sender']['did'])]
+                save_config(config)
+                message = "All of your SkyAlert settings have been deleted. Thank you for using SkyAlert. If you want to use SkyAlert again, just enable follow watches or use the !watch command to watch someone."
+                send_dm(convo['last_message']['sender']['did'], message)
                 
 # dangling cache check; if someone has disabled follow watching, remove their followers cache
 def dangling_cache_check():
