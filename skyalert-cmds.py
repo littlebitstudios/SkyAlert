@@ -237,7 +237,13 @@ def bot_commands_handler():
         if convo['last_message']['sender']['did'] == client.me.did:
             continue # The bot sent the last message, skip
         else:
-            senderprofile = client.get_profile(convo['last_message']['sender']['did']).model_dump()
+            try:
+                senderprofile = client.get_profile(convo['last_message']['sender']['did']).model_dump()
+            except atproto_client.exceptions.BadRequestError as e:
+                if VERBOSE_PRINTING: 
+                    print("Could not obtain profile information from conversation. Skipping.")
+                    print("Faulty DID:", convo['last_message']['sender']['did'])
+                continue
             senderhandle = senderprofile['handle']
             
             if convo['last_message']['text'].lower() == "!help":
