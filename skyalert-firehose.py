@@ -423,7 +423,7 @@ if __name__ == '__main__':
 
     firehose = FirehoseSubscribeReposClient(params)
 
-    workers_count = multiprocessing.cpu_count() * 2 - 1
+    workers_count = int(multiprocessing.cpu_count() / 2) - 1
     max_queue_size = 10000
 
     global queue
