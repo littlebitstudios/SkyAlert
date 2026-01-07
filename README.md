@@ -1,5 +1,4 @@
-Bluesky have introduced a post notifications feature in their own app, so SkyAlert is no longer needed for post notifications.
-SkyAlert will remain online because of the unfollowing notifications feature.
+**The live SkyAlert bot is discontinued.** It was using a lot of internet traffic. Check out [skyalert-ntfy-posts](https://github.com/littlebitstudios/skyalert-ntfy-posts) for a simpler version of SkyAlert that's easier to run on your own server.
 
 ----------------------------------
 # SkyAlert
